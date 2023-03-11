@@ -1,59 +1,54 @@
 # Config
 
-`Config` is a smart contract used by **twaper** to get the data needed for a token's price calculation. Token can be normal ERC20 or LP. Each kind has its own contract implementation.
+`Config` is a smart contract used by **twaper** to load required configurations for calculating price of a token. `Config` has two different implementations, one for getting required configurations for calculating price of a normal ERC20 token and another for a LP token.
 
 ## Contents
 
-- [How to deploy](#how-to-deploy)
-- [How to add `Route`](#how-to-add-route)
-- [How to update `Route`](#how-to-update-route)
-- [How to get `Route`s](#how-to-get-routes)
+- [Deploy](#deploy)
+- [Add a `Route`](#add-a-route)
+- [Update a `Route`](#update-a-route)
+- [Get `Route`s](#get-routes)
 
-## How to deploy
+## Deploy
 
 ### ConfigFactory
 
-To deploy a `Config` for a token regardless of its kind (normal/LP), `ConfigFactory` contract is required. It has two separate functions to deploy `Config` for each of the normal and LP ERC20 tokens:
+`ConfigFactory` is a factory contract that is implemented to simplify deployment of `Config` contracts. It has two methods:
 
-- `deployConfig` for normal
-- `deployLpConfig` for LP
+- `deployConfig` to deploy a config for a normal ERC20 token price calculation
+- `deployLpConfig` to deploy a config for a LP token price calculation
 
-No inputs are needed for deploying `ConfigFactory` and it can be done by any of the [methods of deploying a contract](https://ethereum.org/en/developers/docs/smart-contracts/deploying/#:~:text=To%20deploy%20a%20smart%20contract,contract%20without%20specifying%20any%20recipient.).
+No input is required to deploy the `ConfigFactory` itself, and any of the [methods for deploying a contract](https://ethereum.org/en/developers/docs/smart-contracts/deploying/#:~:text=To%20deploy%20a%20smart%20contract,contract%20without%20specifying%20any%20recipient.) can be used to do that.
 
-Having the `ConfigFactory` deployed, `Config` can be deployed by calling either of the functions mentioned.
+It's not generally required to deploy the `ConfigFactory` yourself. It's deployed [?here](https://ftmscan.com/) and you can call its methods to deploy different `Config` instances for calculating price of different tokens.
 
 ### deployConfig
 
-Deploying a `Config` for a normal ERC20 token is as easy as calling a function named `deployConfig`.
+Deploying required `Config` for calculating price of a normal ERC20 token is as easy as calling `deployConfig` function on the [?`ConfigFactory`](https://ftmscan.com/). This method has the following inputs:
 
-It has 4 inputs should be provided by the deployer:
-
-- `description` is a string to describe `Config` which is going to be deployed (e.g. `"ETH/USDC"` means `Config` contains routes can be used to calculate price of ETH in terms of USDC.)
-- `validPriceGap` is the valid price gap between routes of the token which `Config` contains its routes. It is used by **twaper**.
-- `setter` is the address which can change data of `Config`
+- `description` is a string to describe `Config` which is going to be deployed (e.g. `"ETH/USDC"` means `Config` contains routes can be used to calculate price of ETH in terms of USDC).
+- `validPriceGap`  is the valid price difference percentage between differnt routes in scale of `1e18`.
+- `setter` is the address that is authorized to update the `Config`.
 - `admin` is the address of `Config`'s admin.
-
-Calling `deployConfig` can be done by running a script or through a block explorer UI.
 
 ### deployLpConfig
 
-Just like `Config` one function call can do the job of deploying a `LpConfig`.
+Just like `Config`, deployment of a `LpConfig` is as simple as calling `deployLpConfig` function. This method has the following inputs:
 
-Inputs are 7 and here are the details for them:
-
-- `chainId` is the chain id in which Lp token deployed
+- `chainId` is the chain id in which Lp token is deployed
 - `pair` is the address of the Lp token
 - `config0` is the address of the `Config` deployed for `token0`
 - `config1` is the address of the `Config` deployed for `token1`
-- `description` is a string to describe `LpConfig` which is going to be deployed (e.g. `"ETH-USDC LP Uniswap"` means `LpConfig` can be used for ETH-USDC LP of Uniswap price calculation)
-- `setter` is the address which can change data of `Config`
+- `description` is a string to describe `LpConfig` which is going to be deployed (e.g. `"ETH-USDC LP Uniswap"` means `LpConfig` can be used to calculate price for ETH-USDC LP on Uniswap).
+- `setter` is the address that is authorized to update the `Config`.
 - `admin` is the address of `Config`'s admin.
 
-## How to add `Route`
+## Add a `Route`
 
-Routes are the data which used by **twaper** to calculate a normal ERC20 token's twap. Each `Config` contract store a token's Route.
+The most important configuration that a `Config` instance hosts is the list of routes that can be used to calculate the price of a normal ERC20 token. 
+**twaper** calculates price of the token based on each route separately and then returns a weighted average as the result.
 
-For adding a `Route` to the contract `addRoute` function is used. It has 3 inputs and below is the description:
+`addRoute` function can be used to add a new route to a `Config` instance. This method has the following inputs:
 
 - `dex` is the name of the dex, the `Route` belongs to.
 - `path` is an address array which contains pair addresses of the `Route`. E.x `[0xaF918eF5b9f33231764A5557881E6D3e5277d456, 0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c]` is [SpookySwap](https://spooky.fi/#/) route for [DEUS](https://deus.finance/) token. First is deusWftm address and second is wftmUsdc address.
@@ -70,7 +65,7 @@ For adding a `Route` to the contract `addRoute` function is used. It has 3 input
 
 **Routes can be added by `SETTER_ROLE` of the contract.**
 
-## How to update `Route`
+## Update a `Route`
 
 Updating a `Route` can be done in whole or in parts of it.
 
@@ -92,6 +87,6 @@ Each of them get `index` of the `Route` and new value for the variable needed to
 
 **Routes can be updated by `SETTER_ROLE` of the contract.**
 
-## How to get `Route`s
+## Get `Route`s
 
 All `Route`s of `Config` can be gotten by calling `getRoutes` function. No inputs needed and it returns `validPriceGap` and array of `Route`.
